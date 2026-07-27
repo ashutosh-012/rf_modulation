@@ -1,0 +1,4 @@
+architecture: "cldnn"
+num_classes: 8
+input_channels: 2
+seq_len: 128

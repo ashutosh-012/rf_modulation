@@ -1,0 +1,5 @@
+architecture: "lstm"
+num_classes: 8
+input_size: 2
+hidden_size: 128
+num_layers: 2

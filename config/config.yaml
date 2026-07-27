@@ -1,0 +1,8 @@
+defaults:
+  - model: cldnn_se
+  - data: radioml
+  - training: default
+
+experiment:
+  name: "default_experiment"
+  seed: 42

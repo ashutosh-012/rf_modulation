@@ -1,0 +1,10 @@
+dataset: "RadioML2016.10A"
+representation: "ap" # iq, ap, stft, constellation
+train_split: 0.67
+val_split: 0.13
+test_split: 0.20
+stft_params:
+  nfft: 64
+  hopLen: 4
+constel_params:
+  nBins: 64
