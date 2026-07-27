@@ -93,6 +93,10 @@ def prepare_splits():
     for (modType, snr), samples in rawData.items():
         if modType in modFilter:
             continue
+            
+        # FILTER NOISE FLOOR: Only keep signals with SNR >= -4
+        if snr < -4:
+            continue
 
         modName = keyMap.get(modType, modType.decode("utf-8"))
 
