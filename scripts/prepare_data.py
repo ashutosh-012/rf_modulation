@@ -26,8 +26,12 @@ def download_dataset():
     
     try:
         import subprocess
-        # Make sure kaggle is installed
-        subprocess.run([sys.executable, "-m", "pip", "install", "kaggle", "--quiet"], check=True)
+        # Make sure kaggle and python-dotenv are installed
+        subprocess.run([sys.executable, "-m", "pip", "install", "kaggle", "python-dotenv", "--quiet"], check=True)
+        
+        from dotenv import load_dotenv
+        envPath = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+        load_dotenv(envPath)
         
         # Download and unzip directly into the data folder
         print("running kaggle datasets download...")
@@ -37,24 +41,22 @@ def download_dataset():
             "--unzip", "-p", DATA_DIR
         ], check=True)
         
-        print("\ndownload complete")
+        # Verify the file is where it should be
+        if not os.path.exists(RAW_FILE):
+            print(f"Warning: Kaggle download succeeded but {RAW_FILE} was not found.")
+            # Search for the pkl file in the directory and rename it if needed
+            for file in os.listdir(DATA_DIR):
+                if file.endswith(".pkl"):
+                    os.rename(os.path.join(DATA_DIR, file), RAW_FILE)
+                    print(f"Renamed downloaded file to {RAW_FILE}")
+                    break
+        else:
+            print("\ndownload complete")
+            
     except Exception as e:
         print(f"\nKaggle download failed: {e}")
-        print("Please ensure your Kaggle API key is set up (C:\\Users\\<user>\\.kaggle\\kaggle.json)")
-        print("Generating synthetic RadioML-like dataset for demonstration purposes...")
-        
-        mods = [b"QAM16", b"QAM64", b"QPSK", b"8PSK", b"CPFSK", b"GFSK", b"BPSK", b"PAM4"]
-        snrs = list(range(-20, 20, 2))
-        
-        synthData = {}
-        for mod in mods:
-            for snr in snrs:
-                synthData[(mod, snr)] = np.random.randn(100, 2, 128).astype(np.float32)
-                
-        with open(RAW_FILE, "wb") as f:
-            pickle.dump(synthData, f)
-            
-        print(f"Synthetic dataset generated at {RAW_FILE}")
+        print("Please ensure your Kaggle credentials are correct in the .env file")
+        sys.exit(1)
 
 def _progress(blockNum, blockSize, totalSize):
     downloaded = blockNum * blockSize

@@ -13,3 +13,4 @@ wandb/
 dist/
 build/
 .ipynb_checkpoints/
+.env
