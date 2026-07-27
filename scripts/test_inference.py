@@ -73,8 +73,6 @@ def main(cfg: DictConfig):
             
     print("-" * 55)
     print(f"Accuracy on this random batch: {correctCount}/10")
-    print("Note: Since we only trained for 1 epoch, accuracy will be relatively low.")
-    print("Train for 50-100 epochs for production accuracy.")
     print("="*50 + "\n")
 
 if __name__ == "__main__":
