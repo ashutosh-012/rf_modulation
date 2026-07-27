@@ -56,8 +56,13 @@ def main(cfg: DictConfig):
             preds = outputs.argmax(dim=1)
             
             allPreds.extend(preds.cpu().numpy())
-            allLabels.extend(labels.numpy())
-            allSnrs.extend(snrs)
+            allLabels.extend(labels.cpu().numpy())
+            
+            # Extract standard integers from the SNR tensors so they group correctly
+            if isinstance(snrs, torch.Tensor):
+                allSnrs.extend(snrs.cpu().numpy())
+            else:
+                allSnrs.extend([s.item() if hasattr(s, "item") else s for s in snrs])
             
     snrAcc = compute_per_snr_accuracy(allPreds, allLabels, allSnrs)
     
