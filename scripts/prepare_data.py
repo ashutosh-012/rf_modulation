@@ -33,13 +33,12 @@ def download_dataset():
         envPath = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
         load_dotenv(envPath)
         
+        import kaggle
+        kaggle.api.authenticate()
+        
         # Download and unzip directly into the data folder
-        print("running kaggle datasets download...")
-        subprocess.run([
-            sys.executable, "-m", "kaggle", "datasets", "download", "-d", 
-            "nolasthitnotomorrow/radioml2016-deepsigcom", 
-            "--unzip", "-p", DATA_DIR
-        ], check=True)
+        print("running kaggle api dataset download...")
+        kaggle.api.dataset_download_cli("nolasthitnotomorrow/radioml2016-deepsigcom", path=DATA_DIR, unzip=True)
         
         # Verify the file is where it should be
         if not os.path.exists(RAW_FILE):
