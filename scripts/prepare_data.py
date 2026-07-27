@@ -36,7 +36,7 @@ def download_dataset():
         # Download and unzip directly into the data folder
         print("running kaggle datasets download...")
         subprocess.run([
-            "kaggle", "datasets", "download", "-d", 
+            sys.executable, "-m", "kaggle", "datasets", "download", "-d", 
             "nolasthitnotomorrow/radioml2016-deepsigcom", 
             "--unzip", "-p", DATA_DIR
         ], check=True)
