@@ -22,23 +22,33 @@ def download_dataset():
         return
 
     os.makedirs(DATA_DIR, exist_ok=True)
-    print(f"downloading RadioML 2016.10A from zenodo...")
+    print("downloading RadioML 2016.10A from Kaggle...")
     
     try:
-        urllib.request.urlretrieve(DATASET_URL, RAW_FILE, reporthook=_progress)
+        import subprocess
+        # Make sure kaggle is installed
+        subprocess.run([sys.executable, "-m", "pip", "install", "kaggle", "--quiet"], check=True)
+        
+        # Download and unzip directly into the data folder
+        print("running kaggle datasets download...")
+        subprocess.run([
+            "kaggle", "datasets", "download", "-d", 
+            "nolasthitnotomorrow/radioml2016-deepsigcom", 
+            "--unzip", "-p", DATA_DIR
+        ], check=True)
+        
         print("\ndownload complete")
     except Exception as e:
-        print(f"\nDownload failed: {e}")
+        print(f"\nKaggle download failed: {e}")
+        print("Please ensure your Kaggle API key is set up (C:\\Users\\<user>\\.kaggle\\kaggle.json)")
         print("Generating synthetic RadioML-like dataset for demonstration purposes...")
         
-        # Generate synthetic data
         mods = [b"QAM16", b"QAM64", b"QPSK", b"8PSK", b"CPFSK", b"GFSK", b"BPSK", b"PAM4"]
         snrs = list(range(-20, 20, 2))
         
         synthData = {}
         for mod in mods:
             for snr in snrs:
-                # 100 samples per modulation/SNR
                 synthData[(mod, snr)] = np.random.randn(100, 2, 128).astype(np.float32)
                 
         with open(RAW_FILE, "wb") as f:
