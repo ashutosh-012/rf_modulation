@@ -15,7 +15,7 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo.
 echo [3/3] Exporting to ONNX and TensorRT...
-python scripts\export_onnx.py
+python scripts\export_onnx.py model=cnn
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo.
