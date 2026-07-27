@@ -27,7 +27,9 @@ class InferenceResponse(BaseModel):
 @app.on_event("startup")
 def load_model():
     global ort_session
-    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs", "models", "default_experiment.onnx")
+    # server.py is in src/deployment/, so we need to go up two levels to reach the root
+    rootDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    model_path = os.path.join(rootDir, "outputs", "models", "default_experiment.onnx")
     
     if not os.path.exists(model_path):
         print(f"WARNING: ONNX model not found at {model_path}. Please run ONNX export script first.")
