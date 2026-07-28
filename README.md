@@ -6,18 +6,77 @@ Curiosity regarding how electromagnetic wave propagation degrades in highly nois
 
 To ensure total reproducibility, a fully automated MLOps pipeline was engineered. This pipeline handles the lifecycle of the dataset—from pulling the RadioML 2016.10A set directly from the Kaggle API, applying pre-processing filters, executing distributed training configurations via Hydra, and ultimately compiling the computational graph into an optimized ONNX runtime environment for edge deployment.
 
-![System Architecture](assets/system_design.png)
+```text
++----------------+      +-------------------+      +------------------+
+|   Kaggle API   | ---> | prepare_data.py   | ---> | radioml_splits   |
+| (Raw IQ Data)  |      | (SNR >= -4 Filter)|      |  (Stratified)    |
++----------------+      +-------------------+      +------------------+
+                                                            |
++----------------+      +-------------------+      +------------------+
+|  FastAPI Server| <--- |   ONNX Exporter   | <--- |  PyTorch Trainer |
+| (Edge Devices) |      | (Trace & Export)  |      |  (CLDNN-SE)      |
++----------------+      +-------------------+      +------------------+
+```
 
 ## Architectural Progression and Topologies
 
-Classifying raw time-series RF signals requires a neural network capable of discerning both the immediate phase/amplitude shifts (spatial features) and the overarching frequency drift over the sampling window (temporal features). Several network topologies were benchmarked to identify the optimal feature extractor:
+Classifying raw time-series RF signals requires a neural network capable of discerning both the immediate phase/amplitude shifts (spatial features) and the overarching frequency drift over the sampling window (temporal features). Several network topologies were benchmarked to identify the optimal feature extractor. 
 
-1. **Convolutional Neural Networks (CNN):** Initial baselines were established using standard 1D CNNs. While effective at extracting immediate high-frequency structural elements, the temporal dependencies across the 128-timestep window were largely lost due to the limited receptive field.
-2. **Residual Networks (ResNet):** By introducing identity skip connections, the vanishing gradient problem was mitigated, allowing for significantly deeper networks. This yielded a higher dimensional latent space and improved accuracy on complex modulations like QAM16 and QAM64.
-3. **Convolutional LSTM Deep Neural Network (CLDNN):** To capture the temporal evolution of the signal, recurrent layers (LSTMs) were appended to the CNN feature extractor. The convolutional blocks isolate the physical geometry of the waveform, while the LSTM layers track the phase shifts sequentially across the time domain.
-4. **CLDNN with Squeeze-and-Excitation (SE):** The final, most performant architecture integrated SE blocks into the CLDNN. The SE mechanism computes a global average pool over the spatial dimensions and applies a fully connected gating mechanism. This mathematically allows the network to dynamically scale channel-wise features, effectively suppressing noise-dominated channels and amplifying signal-dominated ones.
+Here are the structural workflows of the architectures I tested:
 
-![CLDNN-SE Architecture](assets/cldnn_architecture.png)
+### 1. Basic CNN
+Initial baselines were established using standard 1D CNNs. While effective at extracting immediate high-frequency structural elements, the temporal dependencies across the 128-timestep window were largely lost due to the limited receptive field.
+```text
+Input (2x128) -> [Conv1D] -> [ReLU] -> [MaxPool] -> [Flatten] -> [Dense] -> Softmax
+```
+
+### 2. Residual Networks (ResNet)
+By introducing identity skip connections, the vanishing gradient problem was mitigated, allowing for significantly deeper networks. This yielded a higher dimensional latent space and improved accuracy on complex modulations.
+```text
+                  +--------------------------------+
+                  |                                v
+Input (2x128) -> [Conv1D] -> [BatchNorm] -> [ReLU] +-> [Add] -> [Dense] -> Softmax
+```
+
+### 3. Convolutional LSTM Deep Neural Network (CLDNN)
+To capture the temporal evolution of the signal, recurrent layers (LSTMs) were appended to the CNN feature extractor. 
+```text
+Input (2x128) -> [Conv1D Block] -> [LSTM Layers (Temporal)] -> [Dense] -> Softmax
+```
+
+### 4. CLDNN with Squeeze-and-Excitation (SE)
+The final, most performant architecture integrated SE blocks into the CLDNN. The SE mechanism computes a global average pool over the spatial dimensions and applies a fully connected gating mechanism. This mathematically allows the network to dynamically scale channel-wise features, effectively suppressing noise-dominated channels and amplifying signal-dominated ones.
+
+```text
+Input (2x128 IQ Signal)
+        |
+        v
++--------------------+
+|   Conv1D Feature   |  (Extract Spatial Geometry)
+|     Extraction     |
++--------------------+
+        |
+        v
++--------------------+       +--------------------+
+| Squeeze (AvgPool)  | ----> |  Excitation (FC)   |  (Calculate Attention)
++--------------------+       +--------------------+
+        |                              |
+        +<------- Scale Features ------+
+        |
+        v
++--------------------+
+|   LSTM Sequence    |  (Track Temporal Drift)
+|      Modeling      |
++--------------------+
+        |
+        v
++--------------------+
+|    Dense Output    |  (Dropout + Linear Maps)
++--------------------+
+        |
+        v
+Softmax (8 Modulations)
+```
 
 ## The Noise Floor Trap: Benchmarks and Metrics
 
