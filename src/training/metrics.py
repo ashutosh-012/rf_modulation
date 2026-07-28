@@ -3,7 +3,6 @@ import torch
 from sklearn.metrics import confusion_matrix, classification_report
 from collections import defaultdict
 
-
 def compute_per_snr_accuracy(allPreds, allLabels, allSnrs):
     snrAccuracy = defaultdict(lambda: {"correct": 0, "total": 0})
 
@@ -21,11 +20,9 @@ def compute_per_snr_accuracy(allPreds, allLabels, allSnrs):
 
     return results
 
-
 def get_confusion_matrix(allPreds, allLabels, classNames):
     cm = confusion_matrix(allLabels, allPreds)
     return cm
-
 
 def get_classification_report(allPreds, allLabels, classNames):
     report = classification_report(
@@ -35,7 +32,6 @@ def get_classification_report(allPreds, allLabels, classNames):
         output_dict=True
     )
     return report
-
 
 def compute_overall_accuracy(allPreds, allLabels):
     correct = sum(1 for p, l in zip(allPreds, allLabels) if p == l)

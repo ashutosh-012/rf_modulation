@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 class SEBlock(nn.Module):
     def __init__(self, channels, reduction=8):
         super(SEBlock, self).__init__()
@@ -18,7 +17,6 @@ class SEBlock(nn.Module):
         excited = self.sigmoid(self.fc2(excited))
         excited = excited.view(b, c, 1)
         return x * excited
-
 
 class CLDNN_SE(nn.Module):
     def __init__(self, numClasses=8, inputChannels=2, seqLen=128):

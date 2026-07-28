@@ -6,7 +6,6 @@ try:
 except ImportError:
     trt = None
 
-
 class TRTInferenceWrapper:
     def __init__(self, enginePath):
         if trt is None:

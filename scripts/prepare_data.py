@@ -9,12 +9,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data.splitter import snr_stratified_split
 
-
 DATASET_URL = "https://zenodo.org/records/10603774/files/RML2016.10a_dict.pkl?download=1"
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 RAW_FILE = os.path.join(DATA_DIR, "RML2016.10a_dict.pkl")
 SPLIT_FILE = os.path.join(DATA_DIR, "radioml_splits.pkl")
-
 
 def download_dataset():
     if os.path.exists(RAW_FILE):
@@ -26,7 +24,7 @@ def download_dataset():
     
     try:
         import subprocess
-        # Make sure kaggle and python-dotenv are installed
+        
         subprocess.run([sys.executable, "-m", "pip", "install", "kaggle", "python-dotenv", "--quiet"], check=True)
         
         from dotenv import load_dotenv
@@ -36,14 +34,12 @@ def download_dataset():
         import kaggle
         kaggle.api.authenticate()
         
-        # Download and unzip directly into the data folder
         print("running kaggle api dataset download...")
         kaggle.api.dataset_download_cli("nolasthitnotomorrow/radioml2016-deepsigcom", path=DATA_DIR, unzip=True)
         
-        # Verify the file is where it should be
         if not os.path.exists(RAW_FILE):
             print(f"Warning: Kaggle download succeeded but {RAW_FILE} was not found.")
-            # Search for the pkl file in the directory and rename it if needed
+            
             for file in os.listdir(DATA_DIR):
                 if file.endswith(".pkl"):
                     os.rename(os.path.join(DATA_DIR, file), RAW_FILE)
@@ -63,7 +59,6 @@ def _progress(blockNum, blockSize, totalSize):
         pct = min(100, downloaded * 100 / totalSize)
         sys.stdout.write(f"\r  {pct:.1f}% ({downloaded // (1024*1024)} MB / {totalSize // (1024*1024)} MB)")
         sys.stdout.flush()
-
 
 def prepare_splits():
     if os.path.exists(SPLIT_FILE):
@@ -94,7 +89,6 @@ def prepare_splits():
         if modType in modFilter:
             continue
             
-        # FILTER NOISE FLOOR: Only keep signals with SNR >= -4
         if snr < -4:
             continue
 
@@ -122,7 +116,6 @@ def prepare_splits():
         pickle.dump(splits, f, protocol=4)
 
     print(f"saved splits to {SPLIT_FILE}")
-
 
 if __name__ == "__main__":
     download_dataset()

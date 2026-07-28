@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 class LSTMClassifier(nn.Module):
     def __init__(self, numClasses=8, inputSize=2, hiddenSize=128, numLayers=2):
         super(LSTMClassifier, self).__init__()

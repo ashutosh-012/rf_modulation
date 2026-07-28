@@ -1,7 +1,6 @@
 import torch
 import os
 
-
 def export_to_onnx(model, dummyInput, outputPath, opsetVersion=17):
     model.eval()
 

@@ -1,82 +1,46 @@
 # RF Signal Modulation Classification Pipeline
 
-![ONNX](https://img.shields.io/badge/ONNX-Ready-blue.svg)
-![TensorRT](https://img.shields.io/badge/TensorRT-Compatible-76B900.svg)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C.svg)
+I was exploring radio frequency signals recently and thinking about how they degrade over the air due to noise and interference. I got curious if deep learning could identify the underlying modulation schemes even when the signals are buried in heavy noise. I decided to build this project to find out, using the RadioML 2016 dataset to see how well different neural networks could classify the signals.
 
-A production-ready Deep Learning pipeline for Automatic Modulation Classification (AMC) on Radio Frequency (RF) signals. This project automatically downloads the RadioML dataset, trains an advanced CLDNN (with Squeeze-and-Excitation blocks), and exports a highly optimized ONNX model for edge inference.
+## Project Overview
 
-## 🚀 Key Features
-* **Automated Data Pipeline**: Seamlessly downloads and processes the RadioML 2016.10A dataset via the Kaggle API.
-* **Advanced Architectures**: Implements a Convolutional LSTM Deep Neural Network (CLDNN) heavily optimized with Squeeze-and-Excitation (SE) blocks, Dropout, and Cosine Annealing.
-* **Intelligent Noise Filtering**: Stratifies data and filters out undetectable noise floors (SNR < -4 dB), allowing the model to hit a native **84.5% overall accuracy** (peaking at ~90% for high SNR signals).
-* **Edge-Ready MLOps**: Automatically traces and exports the PyTorch graph to a unified `.onnx` file ready for TensorRT deployment on NVIDIA Jetson edge devices.
-* **Production API**: Includes a lightweight, high-performance FastAPI server for immediate model serving.
+This is a complete pipeline for Automatic Modulation Classification. It handles everything from downloading the raw data to training models and deploying them. The goal was to take raw IQ data, filter out the completely undetectable noise floors (anything below SNR -4 dB), and see how accurately different architectures could classify the remaining valid signals.
 
-## 📊 Architecture Flow
-```mermaid
-graph TD
-    A[Kaggle API] -->|Raw IQ Data| B(prepare_data.py)
-    B -->|Filter SNR >= -4| C[radioml_splits.pkl]
-    C --> D(RadioMLDataset)
-    D -->|Hydra Config| E[Trainer]
-    
-    subgraph CLDNN-SE Architecture
-        E --> F[1D Convolutions]
-        F --> G[Squeeze & Excitation]
-        G --> H[LSTM Layers]
-        H --> I[Dense + Dropout]
-    end
-    
-    I --> J[Checkpoints]
-    J --> K(export_onnx.py)
-    K --> L[(default_experiment.onnx)]
-    L --> M[FastAPI Server]
-    L --> N[TensorRT Edge Device]
-```
+## Architectures Explored
 
-## 🛠 Quickstart Guide (Google Colab / Local)
+During my exploration, I built and tested several different types of architectures to see how they would handle the time-series data:
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/ashutosh-012/rf_modulation.git
-   cd rf_modulation
-   ```
+1. Basic CNN: A simple convolutional neural network to establish a baseline for extracting spatial features from the IQ data.
+2. ResNet: A deeper residual network designed to see if skip connections would help the model learn more complex representations without vanishing gradients.
+3. CLDNN: A Convolutional LSTM Deep Neural Network. This architecture combines CNNs to extract the physical shape of the waves with LSTMs to track how those waves change over time.
+4. CLDNN with Squeeze-and-Excitation: I added SE blocks to the CLDNN to act as an attention mechanism. This allowed the network to dynamically weight the importance of different features, which ultimately yielded the best performance.
 
-2. **Add your Kaggle Credentials:**
-   Create a `.env` file in the root directory:
-   ```env
-   KAGGLE_USERNAME=your_username
-   KAGGLE_KEY=your_key
-   ```
+## Running the Pipeline
 
-3. **Install Dependencies:**
-   ```bash
-   pip install hydra-core kaggle python-dotenv timm fastapi uvicorn onnxruntime
-   ```
+If you want to run this yourself, here is how I set it up:
 
-4. **Run the full automated pipeline!**
-   ```bash
-   # Download & process data
-   python scripts/prepare_data.py
-   
-   # Train for 50 epochs (Auto-stops via Patience=15)
-   python scripts/train.py model=cldnn_se training.epochs=50
-   
-   # Export to ONNX
-   python scripts/export_onnx.py model=cldnn_se
-   ```
+1. Clone the repository and navigate into it.
+2. Add your Kaggle credentials to a .env file in the root directory (KAGGLE_USERNAME and KAGGLE_KEY).
+3. Install the dependencies using pip install hydra-core kaggle python-dotenv timm fastapi uvicorn onnxruntime.
 
-## 📈 Evaluation
-To see the exact accuracy breakdown across different SNRs, run the evaluation script:
-```bash
+To run the automated pipeline:
+
+python scripts/prepare_data.py
+python scripts/train.py model=cldnn_se training.epochs=50
+python scripts/export_onnx.py model=cldnn_se
+
+## Evaluation and Results
+
+To evaluate the model and see the accuracy across different Signal-to-Noise Ratios, you can run:
+
 python scripts/evaluate_model.py model=cldnn_se
-```
-*At SNRs greater than 0 dB, the model achieves highly consistent 85% - 90% accuracy.*
 
-## 🌐 Production Serving
-To deploy the ONNX model instantly as a REST API:
-```bash
+I found that the CLDNN-SE model was able to achieve around 85 to 90 percent accuracy consistently on the detectable signals (SNR greater than 0 dB). 
+
+## Deployment
+
+To make the model actually usable, I added a deployment script that serves the exported ONNX model via a local REST API.
+
 python src/deployment/server.py
-```
-The API will be available at `http://localhost:8000`. You can send POST requests containing 256 IQ float values to `/predict` to instantly receive the classified modulation type and a confidence score.
+
+This opens up a server on port 8000. You can test it by sending a POST request to the /predict endpoint with a list of 256 IQ float values, and it will return the classified modulation type.

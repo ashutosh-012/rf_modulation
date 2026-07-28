@@ -9,7 +9,7 @@ req.add_header("Authorization", f"Bearer {token}")
 
 try:
     print("Testing Kaggle Bearer Token...")
-    # Just do a HEAD request or open it and read a few bytes to see if auth works
+    
     response = urllib.request.urlopen(req)
     print(f"Success! Response code: {response.getcode()}")
     print(f"File size: {response.headers.get('Content-Length')} bytes")

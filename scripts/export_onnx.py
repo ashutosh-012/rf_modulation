@@ -9,7 +9,6 @@ from src.export.onnx_export import export_to_onnx
 from src.export.trt_convert import convert_onnx_to_trt
 from scripts.train import build_model
 
-
 @hydra.main(config_path="../config", config_name="config", version_base=None)
 def main(cfg: DictConfig):
     modelName = cfg.experiment.get("name", "model")
@@ -50,7 +49,6 @@ def main(cfg: DictConfig):
     except ImportError:
         print("tensorrt not installed, skipping engine build")
         print("to build on jetson, copy the .onnx file to the device")
-
 
 if __name__ == "__main__":
     main()

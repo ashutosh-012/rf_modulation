@@ -37,7 +37,6 @@ def main(cfg: DictConfig):
     reprType = cfg.data.get("representation", "iq")
     testDataset = RadioMLDataset(splits["test"]["X"], splits["test"]["labels"], representation=reprType)
     
-    # We will run the entire test set
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     
@@ -58,7 +57,6 @@ def main(cfg: DictConfig):
             allPreds.extend(preds.cpu().numpy())
             allLabels.extend(labels.cpu().numpy())
             
-            # Extract standard integers from the SNR tensors so they group correctly
             if isinstance(snrs, torch.Tensor):
                 allSnrs.extend(snrs.cpu().numpy())
             else:

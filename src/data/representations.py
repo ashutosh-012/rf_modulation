@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-
 def iq_to_ap(iqData):
     i_samples = iqData[0]
     q_samples = iqData[1]
@@ -11,7 +10,6 @@ def iq_to_ap(iqData):
 
     apData = np.stack([amplitude, phase], axis=0)
     return apData
-
 
 def iq_to_stft(iqData, nfft=64, hopLen=4, winLen=None):
     i_samples = iqData[0]
@@ -38,7 +36,6 @@ def iq_to_stft(iqData, nfft=64, hopLen=4, winLen=None):
     magSpec = magSpec.numpy()
 
     return magSpec
-
 
 def iq_to_constellation(iqData, nBins=64, xyRange=None):
     i_samples = iqData[0]

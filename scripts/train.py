@@ -112,7 +112,6 @@ def main(cfg: DictConfig):
     print("Building model...")
     model = build_model(cfg.model)
     
-    # Enable PyTorch 2.0 compilation if requested
     if cfg.training.get("compile_model", False):
         print("Compiling model with torch.compile()...")
         try:
@@ -121,7 +120,6 @@ def main(cfg: DictConfig):
             print(f"Failed to compile model: {e}")
             print("Falling back to eager mode.")
             
-    # Combine training config with experiment info for the trainer
     trainConfig = OmegaConf.to_container(cfg.training, resolve=True)
     trainConfig["model_name"] = cfg.experiment.get("name", "model")
     
@@ -133,7 +131,6 @@ def main(cfg: DictConfig):
     if cfg.training.get("wandb", False):
         import wandb
         
-        # log the best model as an artifact
         bestModelPath = os.path.join(trainConfig["checkpoint_dir"], f"{trainConfig['model_name']}_best.pth")
         if os.path.exists(bestModelPath):
             artifact = wandb.Artifact(f"{trainConfig['model_name']}_model", type="model")

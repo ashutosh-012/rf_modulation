@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 class CLDNN(nn.Module):
     def __init__(self, numClasses=8, inputChannels=2, seqLen=128):
         super(CLDNN, self).__init__()

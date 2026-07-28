@@ -5,7 +5,6 @@ try:
 except ImportError:
     trt = None
 
-
 def convert_onnx_to_trt(onnxPath, trtPath, useFp16=True, maxWorkspace=1<<30):
     if trt is None:
         print("tensorrt is not installed. cannot build engine.")

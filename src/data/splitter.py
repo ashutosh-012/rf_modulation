@@ -1,7 +1,6 @@
 import numpy as np
 from collections import defaultdict
 
-
 def snr_stratified_split(X, labels, trainRatio=0.67, valRatio=0.13, testRatio=0.20, seed=42):
     rng = np.random.RandomState(seed)
 
@@ -52,7 +51,6 @@ def snr_stratified_split(X, labels, trainRatio=0.67, valRatio=0.13, testRatio=0.
     }
 
     return splits
-
 
 def verify_no_leakage(splits):
     trainLabels = set()

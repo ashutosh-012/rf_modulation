@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 class ResBlock(nn.Module):
     def __init__(self, channels):
         super(ResBlock, self).__init__()
@@ -19,7 +18,6 @@ class ResBlock(nn.Module):
         out = out + residual
         out = self.relu(out)
         return out
-
 
 class ResNet1D(nn.Module):
     def __init__(self, numClasses=8, inputChannels=2, numBlocks=6, hiddenDim=64):

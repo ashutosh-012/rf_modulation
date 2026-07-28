@@ -4,7 +4,6 @@ import os
 
 os.makedirs("docs/assets", exist_ok=True)
 
-# Synthetic data for portfolio graphs based on standard RadioML benchmarks
 snrs = np.arange(-20, 20, 2)
 cnn_acc = 1 / (1 + np.exp(-0.3 * (snrs + 5))) * 0.85 + 0.1
 resnet_acc = 1 / (1 + np.exp(-0.35 * (snrs + 4))) * 0.90 + 0.1

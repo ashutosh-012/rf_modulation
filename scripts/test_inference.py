@@ -47,7 +47,6 @@ def main(cfg: DictConfig):
     print(f"{'SNR':>5} | {'TRUE MODULATION':>15} | {'PREDICTED MODULATION':>20} | {'RESULT':>6}")
     print("-" * 55)
     
-    # Pick 10 random indices from the test set
     indices = np.random.choice(len(testDataset), 10, replace=False)
     
     correctCount = 0
@@ -55,10 +54,8 @@ def main(cfg: DictConfig):
         for idx in indices:
             feat, labelIdx, snr = testDataset[idx]
             
-            # Add batch dimension
             feat = feat.unsqueeze(0)
             
-            # Forward pass
             out = model(feat)
             predIdx = out.argmax(dim=1).item()
             

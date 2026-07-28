@@ -8,7 +8,6 @@ import numpy as np
 
 from src.training.metrics import compute_per_snr_accuracy, compute_overall_accuracy
 
-
 class Trainer:
     def __init__(self, model, trainDataset, valDataset, config, device=None):
         self.model = model

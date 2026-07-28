@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import timm
 
-
 class EfficientNetWrapper(nn.Module):
     def __init__(self, numClasses=8, inputChannels=1, pretrained=True):
         super(EfficientNetWrapper, self).__init__()

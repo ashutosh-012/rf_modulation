@@ -5,14 +5,12 @@ from torch.utils.data import Dataset
 
 from src.data.representations import iq_to_ap, iq_to_stft, iq_to_constellation
 
-
 MOD_CLASSES = [
     "8PSK", "BPSK", "CPFSK", "GFSK",
     "PAM4", "QAM16", "QAM64", "QPSK"
 ]
 
 MOD_TO_IDX = {mod: i for i, mod in enumerate(MOD_CLASSES)}
-
 
 class RadioMLDataset(Dataset):
     def __init__(self, X, labels, representation="iq", stftParams=None, constelParams=None):
@@ -66,7 +64,6 @@ class RadioMLDataset(Dataset):
         labelTensor = torch.tensor(labelIdx, dtype=torch.long)
 
         return featureTensor, labelTensor, snr
-
 
 def load_radioml_data(filepath):
     with open(filepath, "rb") as f:
