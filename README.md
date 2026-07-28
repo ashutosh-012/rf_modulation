@@ -2,80 +2,93 @@
 
 Curiosity regarding how electromagnetic wave propagation degrades in highly noisy environments led to the exploration of deep learning as a solution for Automatic Modulation Classification (AMC). When raw In-Phase and Quadrature (IQ) signals are transmitted over the air, they suffer from multipath fading, Doppler shifts, and Additive White Gaussian Noise (AWGN). The objective of this project was to construct an end-to-end Machine Learning pipeline capable of theoretically distinguishing sub-noise-floor modulation schemes by extracting spatio-temporal features from raw waveforms.
 
-## End-to-End System Architecture
+## End-to-End MLOps Pipeline & Data Flow
 
-To ensure total reproducibility, a fully automated MLOps pipeline was engineered. This pipeline handles the lifecycle of the dataset—from pulling the RadioML 2016.10A set directly from the Kaggle API, applying pre-processing filters, executing distributed training configurations via Hydra, and ultimately compiling the computational graph into an optimized ONNX runtime environment for edge deployment.
+To ensure total reproducibility, a fully automated pipeline was engineered. This handles the lifecycle of the dataset—from pulling the RadioML 2016.10A set directly from the Kaggle API, applying pre-processing filters, executing distributed training configurations via Hydra, and ultimately compiling the computational graph into an optimized ONNX runtime environment for edge deployment.
 
-```text
-+----------------+      +-------------------+      +------------------+
-|   Kaggle API   | ---> | prepare_data.py   | ---> | radioml_splits   |
-| (Raw IQ Data)  |      | (SNR >= -4 Filter)|      |  (Stratified)    |
-+----------------+      +-------------------+      +------------------+
-                                                            |
-+----------------+      +-------------------+      +------------------+
-|  FastAPI Server| <--- |   ONNX Exporter   | <--- |  PyTorch Trainer |
-| (Edge Devices) |      | (Trace & Export)  |      |  (CLDNN-SE)      |
-+----------------+      +-------------------+      +------------------+
+```mermaid
+graph TD
+    subgraph Data Ingestion
+        A[Kaggle RadioML API] -->|Download RML2016.10a.tar.bz2| B[Extract Raw Pickle Dictionary]
+        B --> C{Signal-to-Noise Ratio Filter}
+        C -->|SNR < -4 dB| D[Discard Noise Floor Samples]
+        C -->|SNR >= -4 dB| E[Preserve High-Fidelity Signals]
+    end
+    subgraph Feature Engineering
+        E --> F[In-Phase & Quadrature Extraction]
+        F --> G[Reshape to 2x128 Tensors]
+    end
+    subgraph Stratification & Loading
+        G --> H[Stratified Shuffle Split]
+        H --> I[Train Set 67%]
+        H --> J[Validation Set 13%]
+        H --> K[Test Set 20%]
+        I --> L((PyTorch DataLoader))
+        J --> L
+        K --> L
+    end
 ```
 
 ## Architectural Progression and Topologies
 
-Classifying raw time-series RF signals requires a neural network capable of discerning both the immediate phase/amplitude shifts (spatial features) and the overarching frequency drift over the sampling window (temporal features). Several network topologies were benchmarked to identify the optimal feature extractor. 
+Classifying raw time-series RF signals requires a neural network capable of discerning both the immediate phase/amplitude shifts (spatial features) and the overarching frequency drift over the sampling window (temporal features). Several network topologies were engineered and benchmarked.
 
-Here are the structural workflows of the architectures I tested:
-
-### 1. Basic CNN
+### 1. Convolutional Neural Networks (CNN)
 Initial baselines were established using standard 1D CNNs. While effective at extracting immediate high-frequency structural elements, the temporal dependencies across the 128-timestep window were largely lost due to the limited receptive field.
-```text
-Input (2x128) -> [Conv1D] -> [ReLU] -> [MaxPool] -> [Flatten] -> [Dense] -> Softmax
+
+```mermaid
+graph LR
+    A[Input 2x128] --> B[Conv1D + ReLU]
+    B --> C[MaxPool1D]
+    C --> D[Conv1D + ReLU]
+    D --> E[Flatten]
+    E --> F[Dense Output]
+    F --> G[Softmax 8 Classes]
 ```
 
 ### 2. Residual Networks (ResNet)
-By introducing identity skip connections, the vanishing gradient problem was mitigated, allowing for significantly deeper networks. This yielded a higher dimensional latent space and improved accuracy on complex modulations.
-```text
-                  +--------------------------------+
-                  |                                v
-Input (2x128) -> [Conv1D] -> [BatchNorm] -> [ReLU] +-> [Add] -> [Dense] -> Softmax
-```
+By introducing identity skip connections, the vanishing gradient problem was mitigated, allowing for significantly deeper networks. This yielded a higher dimensional latent space and improved accuracy on complex modulations like QAM16 and QAM64.
 
 ### 3. Convolutional LSTM Deep Neural Network (CLDNN)
-To capture the temporal evolution of the signal, recurrent layers (LSTMs) were appended to the CNN feature extractor. 
-```text
-Input (2x128) -> [Conv1D Block] -> [LSTM Layers (Temporal)] -> [Dense] -> Softmax
-```
+To capture the temporal evolution of the signal, recurrent layers (LSTMs) were appended to the CNN feature extractor. The convolutional blocks isolate the physical geometry of the waveform, while the LSTM layers track the phase shifts sequentially across the time domain.
 
 ### 4. CLDNN with Squeeze-and-Excitation (SE)
 The final, most performant architecture integrated SE blocks into the CLDNN. The SE mechanism computes a global average pool over the spatial dimensions and applies a fully connected gating mechanism. This mathematically allows the network to dynamically scale channel-wise features, effectively suppressing noise-dominated channels and amplifying signal-dominated ones.
 
-```text
-Input (2x128 IQ Signal)
-        |
-        v
-+--------------------+
-|   Conv1D Feature   |  (Extract Spatial Geometry)
-|     Extraction     |
-+--------------------+
-        |
-        v
-+--------------------+       +--------------------+
-| Squeeze (AvgPool)  | ----> |  Excitation (FC)   |  (Calculate Attention)
-+--------------------+       +--------------------+
-        |                              |
-        +<------- Scale Features ------+
-        |
-        v
-+--------------------+
-|   LSTM Sequence    |  (Track Temporal Drift)
-|      Modeling      |
-+--------------------+
-        |
-        v
-+--------------------+
-|    Dense Output    |  (Dropout + Linear Maps)
-+--------------------+
-        |
-        v
-Softmax (8 Modulations)
+```mermaid
+graph TD
+    In[Input RF Tensor: Batch x 2 x 128] --> C1[Conv1D: 64 Filters, Kernel 8]
+    C1 --> R1[ReLU Activation]
+    R1 --> P1[MaxPool1D: Pool 2]
+    
+    P1 --> C2[Conv1D: 64 Filters, Kernel 8]
+    C2 --> R2[ReLU Activation]
+    R2 --> P2[MaxPool1D: Pool 2]
+    
+    subgraph Squeeze-and-Excitation Attention Mechanism
+        P2 --> SQ[Global Average Pooling 1D]
+        SQ --> EX1[Linear Dense: Reduction Ratio 8]
+        EX1 --> EX2[ReLU]
+        EX2 --> EX3[Linear Dense: 64 Channels]
+        EX3 --> SIG[Sigmoid Gating]
+        SIG -->|Scale Feature Maps| SCALE[Element-wise Multiplication]
+        P2 --> SCALE
+    end
+    
+    subgraph Temporal Sequence Modeling
+        SCALE --> LSTM1[LSTM Layer 1: 64 Hidden Units, Return Sequences]
+        LSTM1 --> D1[Dropout: 0.5]
+        D1 --> LSTM2[LSTM Layer 2: 64 Hidden Units, Return Last State]
+        LSTM2 --> D2[Dropout: 0.5]
+    end
+    
+    subgraph Classification Head
+        D2 --> FC1[Dense: 128 Units]
+        FC1 --> SELU[SELU Activation]
+        SELU --> D3[Dropout 0.5]
+        D3 --> FC2[Dense: 8 Classes]
+        FC2 --> OUT[Softmax Probabilities]
+    end
 ```
 
 ## The Noise Floor Trap: Benchmarks and Metrics
@@ -139,8 +152,15 @@ python scripts/export_onnx.py model=cldnn_se
 
 To facilitate immediate integration, a lightweight, asynchronous REST API was constructed using FastAPI. This server loads the ONNX graph directly into memory, negating the overhead of the full PyTorch framework.
 
-```bash
-python src/deployment/server.py
+```mermaid
+graph LR
+    A[Raw Radio IQ Signal] -->|POST /predict| B(FastAPI Server)
+    B --> C[NumPy Reshape 1x2x128]
+    C --> D[ONNX Runtime Session]
+    D --> E[(Optimized CLDNN-SE.onnx)]
+    E --> F[Logits Output]
+    F --> G[Argmax & Softmax Confidence]
+    G --> H[JSON Inference Response]
 ```
 
 With the server running on `http://0.0.0.0:8000`, downstream applications can execute a standard POST request to the `/predict` endpoint, passing a flat JSON array of 256 IQ float parameters to receive instantaneous, low-latency classifications and softmax confidence scores.
